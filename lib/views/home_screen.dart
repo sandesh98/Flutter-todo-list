@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:todo/models/Todo.dart';
 import 'package:todo/providers/provider.dart';
+import 'package:todo/views/show_todo.dart';
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -47,7 +48,8 @@ Widget _buildBody(BuildContext context, String _name) {
         .collection("todo")
         .add({
           'name': _name,
-          'done': false
+          'done': false,
+          'timestamp': DateTime.now()
         })
         .then((_) => form.reset());
     } catch (e) {
@@ -80,6 +82,19 @@ Widget _buildBody(BuildContext context, String _name) {
             children: <Widget>[
               Expanded(
                 child: TextFormField(
+                  validator: (value) {
+                    if(value.isEmpty) {
+                      return 'Veld is verplicht';
+                    }
+
+                    return null;
+                  },
+                  textInputAction: TextInputAction.send,
+                  onFieldSubmitted: (value) => {
+                    if(formKey.currentState.validate()) {
+                      addTodo()
+                    }
+                  },
                   decoration: InputDecoration(
                     hintText: 'Zoek op naam of locatie',
                     filled: true,
@@ -95,13 +110,6 @@ Widget _buildBody(BuildContext context, String _name) {
                     )
                   ),
                   onSaved: (value) => _name = value,
-                  validator: (value) {
-                    if(value.isEmpty) {
-                      return 'Please enter some text';
-                    }
-
-                    return null;
-                  },
                 ),
               ),
               IconButton(
@@ -121,7 +129,7 @@ Widget _buildBody(BuildContext context, String _name) {
         child: StreamBuilder<QuerySnapshot>(
           stream: getUsersTodos(context),
           builder: (context, snapshot) {
-            if (!snapshot.hasData) return CircularProgressIndicator();
+            if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
             return _buildList(context, snapshot.data.documents);
           }
         )
@@ -146,7 +154,55 @@ Widget _buildListItem(BuildContext context, DocumentSnapshot data) {
 
   return Dismissible(
       key: Key(data.documentID),
-      background: Container(color: Colors.blue),
+      direction: DismissDirection.endToStart,
+      confirmDismiss: (DismissDirection direction) async {
+        return showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text('todo verwijderen?'),
+              actions: <Widget>[
+                FlatButton(
+                  onPressed: () async {
+                    final uid = await Provider.of(context).auth.getCurrentUID();
+                    Firestore.instance.collection("userData")
+                      .document(uid)
+                      .collection('todo')
+                      .document(data.documentID)
+                      .delete();
+                     Navigator.of(context).pop(true);
+                  },
+                  child: Text('Delete'),
+                ),
+                FlatButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: Text('Annuleren'),
+                )
+              ],
+            );
+          }
+        );
+      },
+      background: Container(
+        color: Colors.red,
+        child: Padding(
+          padding: const EdgeInsets.all(15),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: <Widget>[
+              Icon(
+                Icons.delete, 
+                color: Colors.white
+              ),
+              Text('Verwijder todo', 
+              style: TextStyle(
+                color: Colors.white
+                )
+              ),
+            ],
+          ),
+        ),
+      ),
       onDismissed: (direction) async {
         final uid = await Provider.of(context).auth.getCurrentUID();
         Firestore.instance.collection("userData")
@@ -155,44 +211,53 @@ Widget _buildListItem(BuildContext context, DocumentSnapshot data) {
           .document(data.documentID)
           .delete();
       },
-      child: Container(
-      padding: EdgeInsets.symmetric(horizontal: 16),
-      child: Column(
-        children: <Widget>[
-          Card(
-            child: ListTile(
-              title: Text(todo.name,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18.0
-                ),
-              ),
-              subtitle: Text('Gemaakt op: 27-07-2020 | Nummer 1',
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12.0
-                ),
-              ),
-              trailing: IconButton(
-                iconSize: 32,
-                icon: Icon(
-                  todo.done?Icons.check_box:Icons.check_box_outline_blank
-                ),
-                onPressed: () {
-                  Firestore.instance.runTransaction((transaction) async {
-                    DocumentSnapshot freshSnapshot = await transaction.get(todo.reference);
-                    await transaction.update(freshSnapshot.reference, {
-                      'done': !todo.done
-                    });
-                  });
-                },
-              ),
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) =>  ShowTodo(todo: todo)
             ),
-          )
-        ],
+          );
+        },
+        child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 16),
+        child: Column(
+          children: <Widget>[
+            Card(
+              child: ListTile(
+                title: Text(todo.name,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18.0
+                  ),
+                ),
+                subtitle: Text('Gemaakt op: 27-07-2020 | Nummer 1',
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12.0
+                  ),
+                ),
+                trailing: IconButton(
+                  iconSize: 32,
+                  icon: Icon(
+                    todo.done?Icons.check_box:Icons.check_box_outline_blank
+                  ),
+                  onPressed: () {
+                    Firestore.instance.runTransaction((transaction) async {
+                      DocumentSnapshot freshSnapshot = await transaction.get(todo.reference);
+                      await transaction.update(freshSnapshot.reference, {
+                        'done': !todo.done
+                      });
+                    });
+                  },
+                ),
+              ),
+            )
+          ],
+        ),
       ),
     ),
   );
-
 }

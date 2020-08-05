@@ -5,6 +5,7 @@ import 'package:todo/views/home_screen.dart';
 import 'package:todo/views/login_screen.dart';
 
 import 'package:todo/views/register_screen.dart';
+import 'package:todo/views/show_todo.dart';
 
 void main() => runApp(Todo());
 
@@ -20,9 +21,9 @@ class Todo extends StatelessWidget {
         home: HomeController(),
         initialRoute: '/',
         routes: {
-          
           '/register': (context) => RegisterScreen(),
           '/login': (context) => LoginScreen(),
+          '/show-todo': (context) => ShowTodo()
         },
       ),
     );
