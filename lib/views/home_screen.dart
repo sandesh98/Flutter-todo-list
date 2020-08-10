@@ -49,7 +49,7 @@ Widget _buildBody(BuildContext context, String _name) {
         .add({
           'name': _name,
           'done': false,
-          'timestamp': DateTime.now()
+          'createdAt': DateTime.now()
         })
         .then((_) => form.reset());
     } catch (e) {
@@ -63,7 +63,7 @@ Widget _buildBody(BuildContext context, String _name) {
         padding: const EdgeInsets.symmetric(horizontal: 20.0),
         child: Row(
           children: <Widget>[
-            Text('30 todo',
+            Text('blasoe',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 18.0,
@@ -172,7 +172,11 @@ Widget _buildListItem(BuildContext context, DocumentSnapshot data) {
                       .delete();
                      Navigator.of(context).pop(true);
                   },
-                  child: Text('Delete'),
+                  child: Text('Verwijderen',
+                    style: TextStyle(
+                      color: Colors.red
+                    ),
+                  ),
                 ),
                 FlatButton(
                   onPressed: () => Navigator.of(context).pop(false),
@@ -248,7 +252,8 @@ Widget _buildListItem(BuildContext context, DocumentSnapshot data) {
                     Firestore.instance.runTransaction((transaction) async {
                       DocumentSnapshot freshSnapshot = await transaction.get(todo.reference);
                       await transaction.update(freshSnapshot.reference, {
-                        'done': !todo.done
+                        'done': !todo.done,
+                        'updated_at': DateTime.now()
                       });
                     });
                   },
